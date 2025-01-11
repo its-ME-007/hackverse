@@ -48,12 +48,15 @@ def book_appointment():
         "final_price": final_price,
     })
 
-# @appointment_bp.route('/cancel', methods=['DELETE'])
-# def cancel_appointment():
-#     appointment_id = request.args.get('appointment_id')
-#     appointment = appointment.query.get(appointment_id)
-#     if not appointment:
-#         return jsonify({"error": "Appointment not found"}), 404
-#     db.session.delete(appointment)
-#     db.session.commit()
-#     return jsonify({"message": "Appointment cancelled successfully"})
+@appointment_bp.route('/cancel', methods=['DELETE'])
+def cancel_appointment():
+    appointment_id = request.args.get('appointment_id')
+    supabase = get_db()
+    appointment = supabase.table('appointments').select('*').eq('id', appointment_id).execute()
+
+    if not appointment.data:
+        return jsonify({"error": "Appointment not found"}), 404
+
+    supabase.table('appointments').delete().eq('id', appointment_id).execute()
+
+    return jsonify({"message": "Appointment cancelled successfully"})
