@@ -8,8 +8,8 @@ from groclake.modellake import ModelLake
 chatapp = Flask(__name__)
 
 # Set API key and account ID
-GROCLAKE_API_KEY = '6974ce5ac660610b44d9b9fed0ff9548'
-GROCLAKE_ACCOUNT_ID = 'e991fdd1385aee014e253a2937aa76f5'
+GROCLAKE_API_KEY = 'your api key here'
+GROCLAKE_ACCOUNT_ID = 'your acc id here'
 
 # Set environment variables
 os.environ['GROCLAKE_API_KEY'] = GROCLAKE_API_KEY
