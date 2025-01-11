@@ -59,7 +59,7 @@ class Appointment(Base):
         }
 
 class Insurance(Base):
-    __tablename__ = 'insurance policies' 
+    __tablename__ = 'insurances' 
     id = Column(Integer, primary_key=True)
     insurance_provider_name = Column(String(100), nullable=False)
     insurance_policy_name = Column(String(100), nullable =False)
