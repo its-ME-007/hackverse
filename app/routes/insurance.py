@@ -49,3 +49,29 @@ def buy_insurance():
         "final_price": final_price,
     })
 
+@insurance_bp.route('/update/<int:insurance_id>', methods=['PUT'])
+def update_insurance(insurance_id):
+    data = request.json
+    name = data.get('name')
+
+    insurance_policy_price = data.get('insurance_policy_price')
+    
+    supabase = get_db()
+    insurance_response = supabase.table('insurances').select('*').eq('id', insurance_id).execute()
+    insurance = insurance_response.data[0] if insurance_response.data else None
+
+    if not insurance:
+        return jsonify({"error": "Invalid insurance ID"}), 400
+
+    # Update insurance details
+    update_data = {}
+    if name is not None:
+        update_data['name'] = name
+    if insurance_policy_price is not None:
+        update_data['insurance_policy_price'] = insurance_policy_price
+   
+
+    supabase.table('insurances').update(update_data).eq('id', insurance_id).execute()
+
+    return jsonify({"message": "Insurance updated successfully"}), 200
+
