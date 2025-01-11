@@ -1,20 +1,20 @@
 from flask import Blueprint, jsonify, request
-from app.models import Insurance, User
-from app.database import db_session
-from app.utils import validate_datetime
+from app.database import get_db
 
 insurance_bp = Blueprint("insurance", __name__)
 
 @insurance_bp.route('', methods=['GET'])
 def list_insurances():
-    insurances = Insurance.query.all()
-    return jsonify([insurance.to_dict() for insurance in insurances])
+    supabase = get_db()
+    response = supabase.table('insurances').select('*').execute()
+    return jsonify(response.data)
 
 @insurance_bp.route('/search', methods=['GET'])
 def search_insurances():
     query = request.args.get('query')
-    insurances = Insurance.query.filter(Insurance.name.contains(query)).all()
-    return jsonify([insurance.to_dict() for insurance in insurances])
+    supabase = get_db()
+    response = supabase.table('insurances').select('*').ilike('name', f'%{query}%').execute()
+    return jsonify(response.data)
 
 @insurance_bp.route('/buy', methods=['POST'])
 def buy_insurance():
@@ -23,21 +23,23 @@ def buy_insurance():
     insurance_id = data.get('insurance_id')
     quantity = data.get('quantity')
 
-    # Fetch user and insurance details
-    user = User.query.get(user_id)
-    insurance = Insurance.query.get(insurance_id)
+    supabase = get_db()
+    user_response = supabase.table('users').select('*').eq('id', user_id).execute()
+    insurance_response = supabase.table('insurances').select('*').eq('id', insurance_id).execute()
+
+    user = user_response.data[0] if user_response.data else None
+    insurance = insurance_response.data[0] if insurance_response.data else None
 
     if not user or not insurance:
         return jsonify({"error": "Invalid user or insurance ID"}), 400
 
-    # Calculate total price and discount
-    total_price = insurance.price * quantity
-    discount = min(user.points, total_price)  # change the algo
+    total_price = insurance['insurance_policy_price'] * quantity
+    discount = min(user['points'], total_price)
     final_price = total_price - discount
 
     # Deduct points and finalize transaction
-    user.points -= int(discount / 0.00001)
-    db_session.commit()
+    new_points = user['points'] - int(discount / 0.00001)
+    supabase.table('users').update({"points": new_points}).eq('id', user_id).execute()
 
     return jsonify({
         "message": "Purchase successful",
