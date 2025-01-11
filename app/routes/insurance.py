@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app.database import get_db
-
+from app.cart import shared_cart
 insurance_bp = Blueprint("insurance", __name__)
 
 @insurance_bp.route('', methods=['GET'])
@@ -41,6 +41,17 @@ def buy_insurance():
     new_points = user['points'] - int(discount / 0.00001)
     supabase.table('users').update({"points": new_points}).eq('id', user_id).execute()
 
+    cart_item = {
+        "user_id": user_id,
+        'name' : insurance['name'],
+        "insurance_id": insurance_id,
+        "total_price": total_price,
+        "discount": discount,
+        "final_price": final_price,
+    }
+
+    shared_cart.items.append(cart_item)
+
     return jsonify({
         "message": "Purchase successful",
         "insurance_id": insurance_id,
@@ -70,8 +81,6 @@ def update_insurance(insurance_id):
     if insurance_policy_price is not None:
         update_data['insurance_policy_price'] = insurance_policy_price
    
-
     supabase.table('insurances').update(update_data).eq('id', insurance_id).execute()
 
     return jsonify({"message": "Insurance updated successfully"}), 200
-

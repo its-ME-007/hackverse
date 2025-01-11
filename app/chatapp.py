@@ -5,7 +5,7 @@ from groclake.datalake import DataLake
 from groclake.modellake import ModelLake
 
 # Flask App
-app = Flask(__name__)
+chatapp = Flask(__name__)
 
 # Set API key and account ID
 GROCLAKE_API_KEY = '6974ce5ac660610b44d9b9fed0ff9548'
@@ -94,12 +94,12 @@ def upload_document():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/')
+@chatapp.route('/')
 def home():
     """Render the home page."""
     return render_template('index.html')
 
-@app.route('/chat', methods=['POST'])
+@chatapp.route('/chat', methods=['POST'])
 def chat():
     """Chat endpoint for processing user queries."""
     try:
@@ -131,7 +131,7 @@ def chat():
         # Step 5: Query ModelLake with enriched context
         payload = {
             "messages": [
-                {"role": "system", "content": "You are a pharmacist working at a jan aushadhi kendra. refer the doc given "},
+                {"role": "system", "content": "You are a pharmacist working at a jan aushadhi kendra. refer the doc given to help out customers."},
                 {
                     "role": "user",
                     "content": f"Using the following context: {enriched_context}, "
@@ -146,8 +146,8 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
+# keep this as a background server
 if __name__ == '__main__':
-    with app.app_context():    
+    with chatapp.app_context():    
         upload_document()
-    app.run(host='0.0.0.0', port=5000)
+    chatapp.run(host='0.0.0.0', port=5000)

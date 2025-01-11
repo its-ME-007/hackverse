@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app.database import get_db
-
+from app.cart import shared_cart
 medicine_bp = Blueprint('medicine', __name__)
 
 @medicine_bp.route('', methods=['GET'])
@@ -47,6 +47,15 @@ def buy_medicine():
     new_stock = medicine['stock'] - quantity
     supabase.table('medicines').update({"stock": new_stock}).eq('id', medicine_id).execute()
 
+    cart_item = {
+        "user_id": user_id,
+        "medicine_id": medicine_id,
+        "total_price": total_price,
+        "discount": discount,
+        "final_price": final_price,
+        "name": medicine_response['name']
+    }
+    shared_cart.items.append(cart_item)
     return jsonify({
         "message": "Purchase successful",
         "medicine_id": medicine_id,
