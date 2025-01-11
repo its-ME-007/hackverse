@@ -2,13 +2,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from app.models import User, Medicine, Appointment  # Import models to register them
+from config import Config  # Import the Config class
 
-DATABASE_URL = "sqlite:///app.db"  # Replace with your database URL (e.g., PostgreSQL, MySQL)
-
-# Create the database engine
+# Create the database engine using the URI from the Config class
 engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
+    Config.SQLALCHEMY_DATABASE_URI,
+    connect_args={"check_same_thread": False} if "sqlite" in Config.SQLALCHEMY_DATABASE_URI else {},
     echo=True  # Set to True for debugging SQL queries, False for production
 )
 
