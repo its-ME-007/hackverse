@@ -7,6 +7,7 @@ from config import Config
 from .routes.medicine import medicine_bp
 from .routes.appointment import appointment_bp
 from .routes.insurance import insurance_bp
+from flask_cors import CORS
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,6 +15,7 @@ load_dotenv()
 # Initialize the Flask application
 def create_app():
     app = Flask(__name__)
+    CORS(app)  # Enable CORS for all routes
     
     # Load configuration from the Config class
     app.config.from_object(Config)
