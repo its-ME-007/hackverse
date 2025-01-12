@@ -1,0 +1,11 @@
+schemaVersion: 1.0
+endpoints:
+  - name: service-on-port-5000
+    service:
+      port: 5000
+    type: REST
+
+  - name: service-on-port-5001
+    service:
+      port: 5001
+    type: REST
