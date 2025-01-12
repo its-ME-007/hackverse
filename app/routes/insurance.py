@@ -1,20 +1,20 @@
 from flask import Blueprint, jsonify, request
-from app.models import Insurance, User
-from app.database import db_session
-from app.utils import validate_datetime
-
+from app.database import get_db
+from app.cart import shared_cart
 insurance_bp = Blueprint("insurance", __name__)
 
 @insurance_bp.route('', methods=['GET'])
 def list_insurances():
-    insurances = Insurance.query.all()
-    return jsonify([insurance.to_dict() for insurance in insurances])
+    supabase = get_db()
+    response = supabase.table('insurances').select('*').execute()
+    return jsonify(response.data)
 
 @insurance_bp.route('/search', methods=['GET'])
 def search_insurances():
     query = request.args.get('query')
-    insurances = Insurance.query.filter(Insurance.name.contains(query)).all()
-    return jsonify([insurance.to_dict() for insurance in insurances])
+    supabase = get_db()
+    response = supabase.table('insurances').select('*').ilike('name', f'%{query}%').execute()
+    return jsonify(response.data)
 
 @insurance_bp.route('/buy', methods=['POST'])
 def buy_insurance():
@@ -23,21 +23,34 @@ def buy_insurance():
     insurance_id = data.get('insurance_id')
     quantity = data.get('quantity')
 
-    # Fetch user and insurance details
-    user = User.query.get(user_id)
-    insurance = Insurance.query.get(insurance_id)
+    supabase = get_db()
+    user_response = supabase.table('users').select('*').eq('id', user_id).execute()
+    insurance_response = supabase.table('insurances').select('*').eq('id', insurance_id).execute()
+
+    user = user_response.data[0] if user_response.data else None
+    insurance = insurance_response.data[0] if insurance_response.data else None
 
     if not user or not insurance:
         return jsonify({"error": "Invalid user or insurance ID"}), 400
 
-    # Calculate total price and discount
-    total_price = insurance.price * quantity
-    discount = min(user.points, total_price)  # change the algo
+    total_price = insurance['insurance_policy_price'] * quantity
+    discount = min(user['points'], total_price)
     final_price = total_price - discount
 
     # Deduct points and finalize transaction
-    user.points -= int(discount / 0.00001)
-    db_session.commit()
+    new_points = user['points'] - int(discount / 0.00001)
+    supabase.table('users').update({"points": new_points}).eq('id', user_id).execute()
+
+    cart_item = {
+        "user_id": user_id,
+        'name' : insurance['name'],
+        "insurance_id": insurance_id,
+        "total_price": total_price,
+        "discount": discount,
+        "final_price": final_price,
+    }
+
+    shared_cart.items.append(cart_item)
 
     return jsonify({
         "message": "Purchase successful",
@@ -47,3 +60,27 @@ def buy_insurance():
         "final_price": final_price,
     })
 
+@insurance_bp.route('/update/<int:insurance_id>', methods=['PUT'])
+def update_insurance(insurance_id):
+    data = request.json
+    name = data.get('name')
+
+    insurance_policy_price = data.get('insurance_policy_price')
+    
+    supabase = get_db()
+    insurance_response = supabase.table('insurances').select('*').eq('id', insurance_id).execute()
+    insurance = insurance_response.data[0] if insurance_response.data else None
+
+    if not insurance:
+        return jsonify({"error": "Invalid insurance ID"}), 400
+
+    # Update insurance details
+    update_data = {}
+    if name is not None:
+        update_data['name'] = name
+    if insurance_policy_price is not None:
+        update_data['insurance_policy_price'] = insurance_policy_price
+   
+    supabase.table('insurances').update(update_data).eq('id', insurance_id).execute()
+
+    return jsonify({"message": "Insurance updated successfully"}), 200

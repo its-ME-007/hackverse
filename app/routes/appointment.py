@@ -1,14 +1,14 @@
 from flask import Blueprint, jsonify, request
-from app.models import Appointment, User
-from app.database import db_session
+from app.database import get_db
 from app.utils import validate_datetime
 
 appointment_bp = Blueprint('appointment', __name__)
 
 @appointment_bp.route('', methods=['GET'])
 def list_appointments():
-    appointments = Appointment.query.all()
-    return jsonify([appointment.to_dict() for appointment in appointments])
+    supabase = get_db()
+    response = supabase.table('appointments').select('*').execute()
+    return jsonify(response.data)
 
 @appointment_bp.route('/book', methods=['POST'])
 def book_appointment():
@@ -17,28 +17,32 @@ def book_appointment():
     patient_name = data.get('patient_name')
     datetime = data.get('datetime')
 
-    # Validate input
     if not validate_datetime(datetime):
         return jsonify({"error": "Invalid datetime format"}), 400
 
-    user = User.query.get(user_id)
+    supabase = get_db()
+    user_response = supabase.table('users').select('*').eq('id', user_id).execute()
+    user = user_response.data[0] if user_response.data else None
+
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # Calculate appointment cost and apply points discount
-    base_price = 500  # Assume a fixed price for appointments
-    discount = min(user.points * 0.01, base_price)  # 1 point = 1% discount
+    base_price = 500
+    discount = min(user['points'] * 0.01, base_price)
     final_price = base_price - discount
 
-    # Deduct points and save appointment
-    user.points -= int(discount / 0.01)
-    appointment = Appointment(patient_name=patient_name, datetime=datetime, user_id=user_id)
-    db_session.add(appointment)
-    db_session.commit()
+    new_points = user['points'] - int(discount / 0.01)
+    supabase.table('users').update({"points": new_points}).eq('id', user_id).execute()
+
+    appointment_data = {
+        "patient_name": patient_name,
+        "datetime": datetime,
+        "user_id": user_id
+    }
+    supabase.table('appointments').insert(appointment_data).execute()
 
     return jsonify({
         "message": "Appointment booked successfully",
-        "appointment_id": appointment.id,
         "base_price": base_price,
         "discount": discount,
         "final_price": final_price,
@@ -47,9 +51,12 @@ def book_appointment():
 @appointment_bp.route('/cancel', methods=['DELETE'])
 def cancel_appointment():
     appointment_id = request.args.get('appointment_id')
-    appointment = Appointment.query.get(appointment_id)
-    if not appointment:
+    supabase = get_db()
+    appointment = supabase.table('appointments').select('*').eq('id', appointment_id).execute()
+
+    if not appointment.data:
         return jsonify({"error": "Appointment not found"}), 404
-    db_session.delete(appointment)
-    db_session.commit()
+
+    supabase.table('appointments').delete().eq('id', appointment_id).execute()
+
     return jsonify({"message": "Appointment cancelled successfully"})
