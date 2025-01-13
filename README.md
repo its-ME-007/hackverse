@@ -171,5 +171,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contact
 
-Your Name - your.email@example.com
-Project Link: [https://github.com/yourusername/medihelp](https://github.com/yourusername/medihelp)
+Your Name - anirudh007kulkarni@gmail.com
+
+Project Link: [(https://github.com/its-ME-007/hackverse)](https://github.com/its-ME-007/hackverse)
